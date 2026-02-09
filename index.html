@@ -214,6 +214,9 @@
         <div class="controls">
             <button class="nav-btn" onclick="prev()">⏮</button>
             <button id="playBtn" class="play-btn" onclick="togglePlay()">▶</button>
+            <button id="stopBtn" class="play-btn"
+                style="background: #ff4d4d; color: white; width: 50px; height: 50px; font-size: 20px;"
+                onclick="stopSong()">⏹</button>
             <button class="nav-btn" onclick="next()">⏭</button>
         </div>
     </div>
@@ -385,9 +388,19 @@
             }
         }
 
-        // เรียกใช้ฟังก์ชันนี้ข้างในฟังก์ชัน loadSong()
-        // โดยเพิ่มบรรทัดนี้ลงไปท้ายสุดของ loadSong:
-        // updateMediaSession();
+        function stopSong() {
+            audio.pause();            // หยุดเพลง
+            audio.currentTime = 0;    // รีเซ็ตเวลาไปที่ 0
+            playBtn.innerText = '▶';  // เปลี่ยนไอคอนเป็น Play
+
+            // รีเซ็ตเนื้อเพลง
+            document.getElementById('progress').style.width = '0%';
+            lyricsContainer.style.transform = `translateY(0px)`;
+
+            // ล้างสถานะ Active ของเนื้อเพลงทั้งหมด
+            const allLines = document.querySelectorAll('.lrc-line');
+            allLines.forEach(line => line.classList.remove('active'));
+        }
     </script>
 </body>
 
