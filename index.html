@@ -1,194 +1,315 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Swipe Music Player</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        :root { --primary: #00d2ff; --bg: #0f0f1b; --card: #1e1e2e; }
-        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: pan-y; } /* ป้องกันการเลื่อนจอขณะปัด */
-        
-        body { 
-            font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; 
-            min-height: 100vh; display: flex; justify-content: center; align-items: center;
-            overflow: hidden; /* ป้องกันหน้าจอสั่นเวลาปัด */
-        }
-        
-        .container { 
-            background: var(--card); border-radius: 35px; padding: 30px; 
-            width: 95%; max-width: 420px; text-align: center;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.05);
-            transition: transform 0.2s ease; /* สำหรับ Effect เวลาปัด */
+        :root {
+            --primary: #00d2ff;
+            --bg: #0f0f1b;
+            --card: #1e1e2e;
         }
 
-        select { width: 100%; padding: 12px; border-radius: 12px; background: #2a2a3d; color: #fff; border: none; margin-bottom: 20px; outline: none; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: pan-y;
+        }
 
-        .lyrics-window { 
-            height: 250px; overflow: hidden; margin: 20px 0; position: relative;
+        /* ป้องกันการเลื่อนจอขณะปัด */
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            /* ป้องกันหน้าจอสั่นเวลาปัด */
+        }
+
+        .container {
+            background: var(--card);
+            border-radius: 35px;
+            padding: 30px;
+            width: 95%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.2s ease;
+            /* สำหรับ Effect เวลาปัด */
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            background: #2a2a3d;
+            color: #fff;
+            border: none;
+            margin-bottom: 20px;
+            outline: none;
+        }
+
+        .lyrics-window {
+            height: 250px;
+            overflow: hidden;
+            margin: 20px 0;
+            position: relative;
             mask-image: linear-gradient(transparent, #000 20%, #000 80%, transparent);
             -webkit-mask-image: linear-gradient(transparent, #000 20%, #000 80%, transparent);
         }
 
-        #lyricsContainer { transition: transform 0.5s cubic-bezier(0.17, 0.67, 0.12, 1); padding-top: 110px; }
-        .lrc-line { padding: 15px 0; font-size: 19px; color: rgba(255,255,255,0.2); transition: 0.4s; line-height: 1.4; }
-        .lrc-line.active { color: var(--primary); font-weight: bold; transform: scale(1.05); }
+        #lyricsContainer {
+            transition: transform 0.5s cubic-bezier(0.17, 0.67, 0.12, 1);
+            padding-top: 110px;
+        }
 
-        .progress-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; cursor: pointer; }
-        #progress { height: 100%; background: var(--primary); width: 0%; border-radius: 10px; }
+        .lrc-line {
+            padding: 15px 0;
+            font-size: 19px;
+            color: rgba(255, 255, 255, 0.2);
+            transition: 0.4s;
+            line-height: 1.4;
+        }
+
+        .lrc-line.active {
+            color: var(--primary);
+            font-weight: bold;
+            transform: scale(1.05);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        #progress {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            border-radius: 10px;
+        }
 
         /* การจัดวางปุ่มที่สมดุล */
-        .controls { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 30px; }
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 30px;
+        }
 
         .control-btn {
-            width: 50px; height: 50px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(255, 255, 255, 0.05); color: white; font-size: 18px;
-            cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: 0.2s;
         }
 
-        .play-btn { 
-            width: 70px; height: 70px; border-radius: 50%; background: #fff; color: #0f0f1b; 
-            border: none; font-size: 28px; cursor: pointer; display: flex; justify-content: center; align-items: center;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        .play-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: #fff;
+            color: #0f0f1b;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
         }
 
-        .stop-btn { color: #ff4d6d; border-color: rgba(255, 77, 109, 0.3); }
-        
-        .hint-text { font-size: 12px; color: #555; margin-top: 15px; }
+        .stop-btn {
+            color: #ff4d6d;
+            border-color: rgba(255, 77, 109, 0.3);
+        }
+
+        .hint-text {
+            font-size: 12px;
+            color: #555;
+            margin-top: 15px;
+        }
     </style>
 </head>
+
 <body id="swipeArea">
 
-<div class="container" id="playerCard">
-    <select id="songPicker"><option>กำลังโหลด...</option></select>
-    <h2 id="title">ชื่อเพลง</h2>
-    <p id="artist">ศิลปิน</p>
+    <div class="container" id="playerCard">
+        <select id="songPicker">
+            <option>กำลังโหลด...</option>
+        </select>
+        <h2 id="title">ชื่อเพลง</h2>
+        <p id="artist">ศิลปิน</p>
 
-    <div class="lyrics-window"><div id="lyricsContainer"></div></div>
+        <div class="lyrics-window">
+            <div id="lyricsContainer"></div>
+        </div>
 
-    <div class="progress-bar" id="progressTrack"><div id="progress"></div></div>
+        <div class="progress-bar" id="progressTrack">
+            <div id="progress"></div>
+        </div>
 
-    <div class="controls">
-        <button class="control-btn" onclick="prev()">⏮</button>
-        <button id="playBtn" class="play-btn" onclick="togglePlay()">▶</button>
-        <button class="control-btn stop-btn" onclick="stopSong()">⏹</button>
-        <button class="control-btn" onclick="next()">⏭</button>
+        <div class="controls">
+            <button class="control-btn" onclick="prev()">⏮</button>
+            <button id="playBtn" class="play-btn" onclick="togglePlay()">▶</button>
+            <button class="control-btn stop-btn" onclick="stopSong()">⏹</button>
+            <button class="control-btn" onclick="next()">⏭</button>
+        </div>
+        <p class="hint-text">ปัดซ้าย/ขวา เพื่อปิดเพลง</p>
     </div>
-    <p class="hint-text">ปัดซ้าย/ขวา เพื่อปิดเพลง</p>
-</div>
 
-<audio id="audioPlayer"></audio>
+    <audio id="audioPlayer"></audio>
 
-<script>
-    let songList = [];
-    let currentLrc = [];
-    const audio = document.getElementById('audioPlayer');
-    const lyricsContainer = document.getElementById('lyricsContainer');
-    const playBtn = document.getElementById('playBtn');
-    const playerCard = document.getElementById('playerCard');
+    <script>
+        let songList = [];
+        let currentLrc = [];
+        const audio = document.getElementById('audioPlayer');
+        const lyricsContainer = document.getElementById('lyricsContainer');
+        const playBtn = document.getElementById('playBtn');
+        const playerCard = document.getElementById('playerCard');
 
-    // 1. โหลดข้อมูล CSV
-    Papa.parse("songs.csv", {
-        download: true, header: true, skipEmptyLines: true,
-        complete: (results) => {
-            songList = results.data;
-            if (songList.length > 0) {
-                const picker = document.getElementById('songPicker');
-                picker.innerHTML = songList.map((s, i) => `<option value="${i}">${s.title}</option>`).join('');
-                picker.onchange = (e) => loadSong(parseInt(e.target.value), true);
-                loadSong(0);
+        // 1. โหลดข้อมูล CSV
+        Papa.parse("songs.csv", {
+            download: true, header: true, skipEmptyLines: true,
+            complete: (results) => {
+                songList = results.data;
+                if (songList.length > 0) {
+                    const picker = document.getElementById('songPicker');
+                    picker.innerHTML = songList.map((s, i) => `<option value="${i}">${s.title}</option>`).join('');
+                    picker.onchange = (e) => loadSong(parseInt(e.target.value), true);
+                    loadSong(0);
+                }
+            }
+        });
+
+        async function loadSong(idx, autoPlay = false) {
+            const s = songList[idx];
+            document.getElementById('title').innerText = s.title;
+            document.getElementById('artist').innerText = s.artist;
+            audio.src = s.audio_file;
+            try {
+                const res = await fetch(s.lrc_file);
+                const text = await res.text();
+                currentLrc = parseLRC(text);
+                lyricsContainer.innerHTML = currentLrc.map((l, i) => `<div class="lrc-line" id="line-${i}">${l.text}</div>`).join('');
+            } catch (e) { lyricsContainer.innerHTML = '<div class="lrc-line">ไม่มีเนื้อเพลง</div>'; }
+            stopSong();
+            if (autoPlay) play();
+        }
+
+        function parseLRC(text) {
+            return text.split('\n').map(line => {
+                const m = line.match(/\[(\d{2}):(\d{2})\.(\d{2})\](.*)/);
+                return m ? { time: parseInt(m[1]) * 60 + parseInt(m[2]) + parseInt(m[3]) / 100, text: m[4].trim() } : null;
+            }).filter(x => x);
+        }
+
+        function togglePlay() { audio.paused ? play() : pause(); }
+        function play() { audio.play(); playBtn.innerText = '⏸'; }
+        function pause() { audio.pause(); playBtn.innerText = '▶'; }
+
+        function stopSong() {
+            audio.pause();
+            audio.currentTime = 0;
+            playBtn.innerText = '▶';
+            document.getElementById('progress').style.width = '0%';
+            lyricsContainer.style.transform = `translateY(0px)`;
+            document.querySelectorAll('.lrc-line').forEach(l => l.classList.remove('active'));
+        }
+
+        audio.ontimeupdate = () => {
+            const prog = (audio.currentTime / audio.duration) * 100;
+            document.getElementById('progress').style.width = prog + '%';
+            const idx = currentLrc.findLastIndex(l => audio.currentTime >= l.time);
+            if (idx !== -1) {
+                document.querySelectorAll('.lrc-line').forEach((l, i) => l.classList.toggle('active', i === idx));
+                const line = document.getElementById(`line-${idx}`);
+                lyricsContainer.style.transform = `translateY(-${line.offsetTop - 80}px)`;
+            }
+        };
+
+        // 2. ระบบ Swipe Gesture
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, false);
+
+        document.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, false);
+
+        function handleSwipe() {
+            const threshold = 100; // ระยะการปัดขั้นต่ำ (พิกเซล)
+            if (Math.abs(touchEndX - touchStartX) > threshold) {
+                // ปัดซ้ายหรือขวาก็ได้ ให้หยุดเพลง
+                stopSong();
+
+                // เพิ่มลูกเล่นสั่นหรือขยับ Card เล็กน้อยเพื่อให้รู้ว่าทำงานแล้ว
+                playerCard.style.transform = 'scale(0.95)';
+                setTimeout(() => playerCard.style.transform = 'scale(1)', 200);
             }
         }
-    });
 
-    async function loadSong(idx, autoPlay = false) {
-        const s = songList[idx];
-        document.getElementById('title').innerText = s.title;
-        document.getElementById('artist').innerText = s.artist;
-        audio.src = s.audio_file;
-        try {
-            const res = await fetch(s.lrc_file);
-            const text = await res.text();
-            currentLrc = parseLRC(text);
-            lyricsContainer.innerHTML = currentLrc.map((l, i) => `<div class="lrc-line" id="line-${i}">${l.text}</div>`).join('');
-        } catch (e) { lyricsContainer.innerHTML = '<div class="lrc-line">ไม่มีเนื้อเพลง</div>'; }
-        stopSong();
-        if (autoPlay) play();
-    }
-
-    function parseLRC(text) {
-        return text.split('\n').map(line => {
-            const m = line.match(/\[(\d{2}):(\d{2})\.(\d{2})\](.*)/);
-            return m ? { time: parseInt(m[1])*60 + parseInt(m[2]) + parseInt(m[3])/100, text: m[4].trim() } : null;
-        }).filter(x => x);
-    }
-
-    function togglePlay() { audio.paused ? play() : pause(); }
-    function play() { audio.play(); playBtn.innerText = '⏸'; }
-    function pause() { audio.pause(); playBtn.innerText = '▶'; }
-
-    function stopSong() {
-        audio.pause();
-        audio.currentTime = 0;
-        playBtn.innerText = '▶';
-        document.getElementById('progress').style.width = '0%';
-        lyricsContainer.style.transform = `translateY(0px)`;
-        document.querySelectorAll('.lrc-line').forEach(l => l.classList.remove('active'));
-    }
-
-    audio.ontimeupdate = () => {
-        const prog = (audio.currentTime / audio.duration) * 100;
-        document.getElementById('progress').style.width = prog + '%';
-        const idx = currentLrc.findLastIndex(l => audio.currentTime >= l.time);
-        if (idx !== -1) {
-            document.querySelectorAll('.lrc-line').forEach((l, i) => l.classList.toggle('active', i === idx));
-            const line = document.getElementById(`line-${idx}`);
-            lyricsContainer.style.transform = `translateY(-${line.offsetTop - 80}px)`;
+        function next() {
+            let idx = (parseInt(document.getElementById('songPicker').value) + 1) % songList.length;
+            document.getElementById('songPicker').value = idx;
+            loadSong(idx, true);
         }
-    };
 
-    // 2. ระบบ Swipe Gesture
-    let touchStartX = 0;
-    let touchEndX = 0;
+        function prev() {
+            let idx = (parseInt(document.getElementById('songPicker').value) - 1 + songList.length) % songList.length;
+            document.getElementById('songPicker').value = idx;
+            loadSong(idx, true);
+        }
 
-    document.addEventListener('touchstart', e => {
-        touchStartX = e.changedTouches[0].screenX;
-    }, false);
+        audio.onended = next;
+        document.getElementById('progressTrack').onclick = (e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+        };
 
-    document.addEventListener('touchend', e => {
-        touchEndX = e.changedTouches[0].screenX;
-        handleSwipe();
-    }, false);
+        // 1. ตรวจจับการ "ซ่อน" หน้าจอ (เช่น ปัดสลับแอป หรือล็อคจอ)
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                console.log("หน้าจอถูกซ่อน -> หยุดเพลง");
+                stopSong(); // เรียกฟังก์ชันหยุดเพลงที่คุณมีอยู่แล้ว
+            }
+        });
 
-    function handleSwipe() {
-        const threshold = 100; // ระยะการปัดขั้นต่ำ (พิกเซล)
-        if (Math.abs(touchEndX - touchStartX) > threshold) {
-            // ปัดซ้ายหรือขวาก็ได้ ให้หยุดเพลง
+        // 2. ตรวจจับการ "ปัดขอบจอเพื่อย้อนกลับ" (Back Gesture)
+        window.addEventListener("pagehide", () => {
             stopSong();
-            
-            // เพิ่มลูกเล่นสั่นหรือขยับ Card เล็กน้อยเพื่อให้รู้ว่าทำงานแล้ว
-            playerCard.style.transform = 'scale(0.95)';
-            setTimeout(() => playerCard.style.transform = 'scale(1)', 200);
-        }
-    }
+        });
 
-    function next() {
-        let idx = (parseInt(document.getElementById('songPicker').value) + 1) % songList.length;
-        document.getElementById('songPicker').value = idx;
-        loadSong(idx, true);
-    }
-
-    function prev() {
-        let idx = (parseInt(document.getElementById('songPicker').value) - 1 + songList.length) % songList.length;
-        document.getElementById('songPicker').value = idx;
-        loadSong(idx, true);
-    }
-
-    audio.onended = next;
-    document.getElementById('progressTrack').onclick = (e) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
-    };
-</script>
+        // 3. สำหรับ Android/iOS บางรุ่นที่ใช้การสลับหน้าแบบ PopState
+        window.onpopstate = function (event) {
+            stopSong();
+        };
+    </script>
 </body>
+
 </html>
