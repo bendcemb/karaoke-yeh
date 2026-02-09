@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultimate Music Player - Sync LRC</title>
+    <title>Karaoke yeh</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root {
@@ -169,6 +169,26 @@
 
         .nav-btn:hover {
             opacity: 1;
+        }
+
+        @media (max-width: 480px) {
+            .play-btn {
+                width: 80px;
+                /* ขยายปุ่มให้ใหญ่ขึ้นสำหรับนิ้วมือ */
+                height: 80px;
+                font-size: 32px;
+            }
+
+            .nav-btn {
+                font-size: 35px;
+                /* ขยายปุ่ม Next/Prev */
+                padding: 10px;
+            }
+
+            .container {
+                padding: 20px;
+                width: 95%;
+            }
         }
     </style>
 </head>
@@ -343,6 +363,31 @@
             audio.currentTime = pos * audio.duration;
         };
 
+
+        // ฟังก์ชันสำหรับอัปเดตการควบคุมบนหน้าจอมือถือ
+        function updateMediaSession() {
+            if ('mediaSession' in navigator) {
+                const s = songList[currentIdx];
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: s.title,
+                    artist: s.artist,
+                    album: 'My Music Player',
+                    artwork: [
+                        { src: 'https://via.placeholder.com/512', sizes: '512x512', type: 'image/png' }
+                    ]
+                });
+
+                // ตั้งค่าปุ่มกดจากหน้าจอล็อก
+                navigator.mediaSession.setActionHandler('play', play);
+                navigator.mediaSession.setActionHandler('pause', pause);
+                navigator.mediaSession.setActionHandler('previoustrack', prev);
+                navigator.mediaSession.setActionHandler('nexttrack', next);
+            }
+        }
+
+        // เรียกใช้ฟังก์ชันนี้ข้างในฟังก์ชัน loadSong()
+        // โดยเพิ่มบรรทัดนี้ลงไปท้ายสุดของ loadSong:
+        // updateMediaSession();
     </script>
 </body>
 
