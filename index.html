@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Music Player - Sync LRC</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        :root {
+            --primary: #00d2ff;
+            --bg: #0f0f1b;
+            --card: #1e1e2e;
+            --text-dim: rgba(255, 255, 255, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .container {
+            background: var(--card);
+            border-radius: 35px;
+            padding: 30px;
+            width: 95%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Dropdown Style */
+        select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            background: #2a2a3d;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        h2#title {
+            font-size: 22px;
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        p#artist {
+            color: #777;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        /* Lyrics Display Logic */
+        .lyrics-window {
+            height: 250px;
+            /* เพิ่มความสูงเพื่อให้เห็นบริบทเนื้อเพลง */
+            overflow: hidden;
+            margin: 20px 0;
+            position: relative;
+            /* ทำ Effect จางบน-ล่าง */
+            mask-image: linear-gradient(transparent, #000 20%, #000 80%, transparent);
+            -webkit-mask-image: linear-gradient(transparent, #000 20%, #000 80%, transparent);
+            padding: 0 10px;
+        }
+
+        #lyricsContainer {
+            transition: transform 0.5s cubic-bezier(0.17, 0.67, 0.12, 1);
+            padding-top: 110px;
+            /* ระยะเริ่มต้น */
+            will-change: transform;
+        }
+
+        .lrc-line {
+            padding: 15px 0;
+            font-size: 19px;
+            color: var(--text-dim);
+            transition: all 0.4s ease;
+            line-height: 1.5;
+            word-wrap: break-word;
+            white-space: normal;
+            max-width: 100%;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .lrc-line.active {
+            color: var(--primary);
+            font-weight: bold;
+            transform: scale(1.08);
+            text-shadow: 0 0 15px rgba(0, 210, 255, 0.3);
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        #progress {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            border-radius: 10px;
+            transition: width 0.1s linear;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .play-btn {
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            background: #fff;
+            color: #000;
+            border: none;
+            font-size: 26px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: 0.2s;
+        }
+
+        .play-btn:hover {
+            transform: scale(1.1);
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: 0.2s;
+        }
+
+        .nav-btn:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <select id="songPicker">
+            <option>กำลังโหลดรายการเพลง...</option>
+        </select>
+
+        <h2 id="title">ชื่อเพลง</h2>
+        <p id="artist">ศิลปิน</p>
+
+        <div class="lyrics-window">
+            <div id="lyricsContainer"></div>
+        </div>
+
+        <div class="progress-bar" id="progressTrack">
+            <div id="progress"></div>
+        </div>
+
+        <div class="controls">
+            <button class="nav-btn" onclick="prev()">⏮</button>
+            <button id="playBtn" class="play-btn" onclick="togglePlay()">▶</button>
+            <button class="nav-btn" onclick="next()">⏭</button>
+        </div>
+    </div>
+
+    <audio id="audioPlayer"></audio>
+
+    <script>
+        let songList = [];
+        let currentLrc = [];
+        const audio = document.getElementById('audioPlayer');
+        const lyricsContainer = document.getElementById('lyricsContainer');
+        const songPicker = document.getElementById('songPicker');
+        const playBtn = document.getElementById('playBtn');
+
+        // 1. โหลดและ Parse ไฟล์ CSV
+        Papa.parse("songs.csv", {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+                songList = results.data;
+                if (songList.length > 0) {
+                    renderDropdown();
+                    loadSong(0); // โหลดเพลงแรกเริ่มต้น
+                }
+            },
+            error: (err) => {
+                console.error("Error loading CSV:", err);
+                songPicker.innerHTML = "<option>ไม่พบไฟล์ songs.csv</option>";
+            }
+        });
+
+        function renderDropdown() {
+            songPicker.innerHTML = songList.map((s, i) =>
+                `<option value="${i}">${s.title} - ${s.artist}</option>`
+            ).join('');
+
+            songPicker.onchange = (e) => loadSong(parseInt(e.target.value), true);
+        }
+
+        // 2. ฟังก์ชันโหลดเพลงและเนื้อเพลง
+        async function loadSong(idx, autoPlay = false) {
+            const s = songList[idx];
+            document.getElementById('title').innerText = s.title;
+            document.getElementById('artist').innerText = s.artist;
+
+            // รีเซ็ต UI
+            lyricsContainer.style.transform = `translateY(0px)`;
+            lyricsContainer.innerHTML = '<div class="lrc-line">กำลังโหลด...</div>';
+
+            audio.src = s.audio_file;
+
+            try {
+                // โหลดไฟล์ .lrc จากโฟลเดอร์ที่ระบุใน CSV
+                const res = await fetch(s.lrc_file);
+                if (!res.ok) throw new Error();
+                const lrcText = await res.text();
+                currentLrc = parseLRC(lrcText);
+
+                // สร้าง HTML บรรทัดเนื้อเพลง
+                lyricsContainer.innerHTML = currentLrc.map((l, i) =>
+                    `<div class="lrc-line" id="line-${i}">${l.text}</div>`
+                ).join('');
+            } catch (err) {
+                lyricsContainer.innerHTML = '<div class="lrc-line">ไม่มีเนื้อเพลง</div>';
+                currentLrc = [];
+            }
+
+            if (autoPlay) play();
+        }
+
+        // 3. แยกเวลาและข้อความจาก LRC
+        function parseLRC(text) {
+            const lines = text.split('\n');
+            const result = [];
+            const lrcRegex = /\[(\d{2}):(\d{2})\.(\d{2})\](.*)/;
+
+            lines.forEach(line => {
+                const match = line.match(lrcRegex);
+                if (match) {
+                    const seconds = parseInt(match[1]) * 60 + parseInt(match[2]) + parseInt(match[3]) / 100;
+                    result.push({ time: seconds, text: match[4].trim() });
+                }
+            });
+            return result;
+        }
+
+        // 4. ระบบ Play/Pause
+        function togglePlay() { audio.paused ? play() : pause(); }
+
+        function play() {
+            audio.play().catch(e => console.log("User interaction required"));
+            playBtn.innerText = '⏸';
+        }
+
+        function pause() {
+            audio.pause();
+            playBtn.innerText = '▶';
+        }
+
+        // 5. Sync เนื้อเพลงและ Progress Bar ตามเวลาจริง
+        audio.ontimeupdate = () => {
+            if (!audio.duration) return;
+
+            // อัปเดต Progress Bar
+            const prog = (audio.currentTime / audio.duration) * 100;
+            document.getElementById('progress').style.width = prog + '%';
+
+            // ค้นหาบรรทัดที่ต้อง Active
+            const idx = currentLrc.findLastIndex(l => audio.currentTime >= l.time);
+
+            if (idx !== -1) {
+                const allLines = document.querySelectorAll('.lrc-line');
+                allLines.forEach((l, i) => l.classList.toggle('active', i === idx));
+
+                const activeLine = document.getElementById(`line-${idx}`);
+                const windowHeight = document.querySelector('.lyrics-window').offsetHeight;
+
+                // คำนวณ Offset ให้บรรทัดปัจจุบันอยู่กึ่งกลางหน้าต่าง (Center Alignment)
+                // สูตร: ตำแหน่งบรรทัด - (ครึ่งหนึ่งของหน้าต่าง) + (ครึ่งหนึ่งของความสูงบรรทัด)
+                const offset = activeLine.offsetTop - (windowHeight / 2) + (activeLine.offsetHeight / 2);
+
+                lyricsContainer.style.transform = `translateY(-${offset}px)`;
+            }
+        };
+
+        // 6. ฟังก์ชันเปลี่ยนเพลง Next/Prev
+        function next() {
+            let nextIdx = (parseInt(songPicker.value) + 1) % songList.length;
+            songPicker.value = nextIdx;
+            loadSong(nextIdx, true);
+        }
+
+        function prev() {
+            let prevIdx = (parseInt(songPicker.value) - 1 + songList.length) % songList.length;
+            songPicker.value = prevIdx;
+            loadSong(prevIdx, true);
+        }
+
+        // เมื่อเพลงจบ
+        audio.onended = next;
+
+        // กดที่แถบเวลาเพื่อ Seek
+        document.getElementById('progressTrack').onclick = (e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            audio.currentTime = pos * audio.duration;
+        };
+
+    </script>
+</body>
+
+</html>
