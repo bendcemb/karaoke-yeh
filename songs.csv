@@ -1,3 +1,4 @@
-﻿title,artist,audio_file,lrc_file
-Girls Boys,blur,songs\Girls Boys.mp3,lyrics\Girls Boys.lrc
-12 to 12,Sombr,songs\12 to 12.mp3,lyrics\12 to 12.lrc
+title	artist	audio_file	lrc_file
+Girls Boys	blur	songs\Girls Boys.mp3	lyrics\Girls Boys.lrc
+12 to 12	Sombr	songs\12 to 12.mp3	lyrics\12 to 12.lrc
+cold fire	Prep	songs\cold fire.mp3	lyrics\cold fire.lrc
